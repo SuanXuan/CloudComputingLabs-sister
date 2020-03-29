@@ -1,0 +1,4 @@
+sudoku without CPU
+sudoku2 CPU
+make 
+./sudoku test1000

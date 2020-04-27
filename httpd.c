@@ -43,6 +43,27 @@ void not_found(int);
 void serve_file(int, const char *);
 int startup(unsigned short int ,char*);
 void unimplemented(int);
+int StringFind(const char *, const char *);
+
+int StringFind(const char *pSrc, const char *pDst)
+{
+	int i, j;
+	for (i=0; pSrc[i]!='\0'; i++)
+	{
+		if(pSrc[i]!=pDst[0])
+			continue;		
+		j = 0;
+		while(pDst[j]!='\0' && pSrc[i+j]!='\0')
+		{
+			j++;
+			if(pDst[j]!=pSrc[i+j])
+			break;
+		}
+		if(pDst[j]=='\0')
+			return i;
+	}
+	return -1;
+}
 
 /**********************************************************************/
 /* A request has caused a call to accept() on the server port to
@@ -52,7 +73,7 @@ void unimplemented(int);
 void accept_request(int client)
 {
  char buf[1024];
- int numchars;
+ int numchars,numchars2;
  char method[255];
  char url[255];
  char path[512];
@@ -63,6 +84,7 @@ void accept_request(int client)
  char *query_string = NULL;
 
  numchars = get_line(client, buf, sizeof(buf));
+ numchars2 = numchars;
  i = 0; j = 0;
  while (!ISspace(buf[j]) && (i < sizeof(method) - 1))
  {
@@ -77,8 +99,31 @@ void accept_request(int client)
   return;
  }
 
- if (strcasecmp(method, "POST") == 0)
-  cgi = 1;
+ if (strcasecmp(method, "POST") == 0){
+      cgi = 1;
+      /*jugde name and id
+      int Has_nameid = 0;
+     while ((numchars2 > 0) && strcmp("\n", buf))
+     {
+          buf[15] = '\0';
+          if (StringFind(buf, "Name=") != -1)
+          {
+               if (StringFind(buf, "ID=") != -1)
+               {
+                    Has_nameid = 1;
+               }
+          }
+          numchars2 = get_line(client, buf, sizeof(buf));
+     }
+     if(!Has_nameid){
+          printf("name and id not qulifyed");
+          not_found(client);
+          return;
+     }
+     */
+ }
+
+  
 
  i = 0;
  while (ISspace(buf[j]) && (j < sizeof(buf)))
@@ -196,6 +241,7 @@ void error_die(const char *sc)
  exit(1);
 }
 
+
 /**********************************************************************/
 /* Execute a CGI script.  Will need to set environment variables as
  * appropriate.
@@ -214,6 +260,7 @@ void execute_cgi(int client, const char *path,
  char c;
  int numchars = 1;
  int content_length = -1;
+ int Has_nameid = 0;
 
  buf[0] = 'A'; buf[1] = '\0';
  if (strcasecmp(method, "GET") == 0)
@@ -227,12 +274,27 @@ void execute_cgi(int client, const char *path,
    buf[15] = '\0';
    if (strcasecmp(buf, "Content-Length:") == 0)
     content_length = atoi(&(buf[16]));
+    /*
+   if (StringFind(buf, "Name=") != -1)
+   {
+        if (StringFind(buf, "ID=") != -1)
+        {
+             Has_nameid = 1;
+        }
+   }
+   */
    numchars = get_line(client, buf, sizeof(buf));
   }
   if (content_length == -1) {
    bad_request(client);
    return;
   }
+  /*
+  if(!Has_nameid){
+       not_found(client);
+       return;
+  }
+  */
  }
 
  sprintf(buf, "HTTP/1.0 200 OK\r\n");
@@ -268,7 +330,8 @@ void execute_cgi(int client, const char *path,
    putenv(query_env);
   }
   else {   /* POST */
-   sprintf(length_env, "CONTENT_LENGTH=%d", content_length);
+   sprintf(length_env, "CONTENT_LENGTH=%d\n", content_length);
+   send(client, length_env, strlen(length_env), 0);
    putenv(length_env);
   }
   execl(path, path, NULL);

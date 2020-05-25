@@ -1,10 +1,4 @@
-/* J. David's webserver */
-/* This is a simple webserver.
- * Created November 1999 by J. David Blackstone.
- * CSE 4344 (Network concepts), Prof. Zeigler
- * University of Texas at Arlington
- */
-/* This program compiles for Sparc Solaris 2.6.
+/* 
  * To compile for Linux:
  *  1) Comment out the #include <pthread.h> line.
  *  2) Comment out the line that defines the variable newthread.
@@ -72,7 +66,7 @@ int StringFind(const char *pSrc, const char *pDst)
 /**********************************************************************/
 void accept_request(int client)
 {
- char buf[1024];
+ char buf[1024],buf2[1024];
  int numchars,numchars2;
  char method[255];
  char url[255];
@@ -82,9 +76,9 @@ void accept_request(int client)
  int cgi = 0;      /* becomes true if server decides this is a CGI
                     * program */
  char *query_string = NULL;
-
  numchars = get_line(client, buf, sizeof(buf));
  numchars2 = numchars;
+ strcpy(buf2,buf);
  i = 0; j = 0;
  while (!ISspace(buf[j]) && (i < sizeof(method) - 1))
  {
@@ -101,26 +95,7 @@ void accept_request(int client)
 
  if (strcasecmp(method, "POST") == 0){
       cgi = 1;
-      /*jugde name and id
-      int Has_nameid = 0;
-     while ((numchars2 > 0) && strcmp("\n", buf))
-     {
-          buf[15] = '\0';
-          if (StringFind(buf, "Name=") != -1)
-          {
-               if (StringFind(buf, "ID=") != -1)
-               {
-                    Has_nameid = 1;
-               }
-          }
-          numchars2 = get_line(client, buf, sizeof(buf));
-     }
-     if(!Has_nameid){
-          printf("name and id not qulifyed");
-          not_found(client);
-          return;
-     }
-     */
+     
  }
 
   
@@ -268,22 +243,31 @@ void execute_cgi(int client, const char *path,
    numchars = get_line(client, buf, sizeof(buf));
  else    /* POST */
  {
+  //char whole_buf[10240];
+  //recv(client,whole_buf,1000,0);
+  //printf(whole_buf);
   numchars = get_line(client, buf, sizeof(buf));
   while ((numchars > 0) && strcmp("\n", buf))
   {
    buf[15] = '\0';
    if (strcasecmp(buf, "Content-Length:") == 0)
-    content_length = atoi(&(buf[16]));
-    /*
-   if (StringFind(buf, "Name=") != -1)
-   {
-        if (StringFind(buf, "ID=") != -1)
-        {
-             Has_nameid = 1;
-        }
-   }
-   */
+    {
+         content_length = atoi(&(buf[16]));
+         /*
+         numchars = get_line(client, buf, sizeof(buf));
+          if (StringFind(buf, "Name=") != -1)
+          {
+               if (StringFind(buf, "ID=") != -1)
+               {
+                    Has_nameid = 1;
+               }
+          }
+          break;
+          */
+    }
+   
    numchars = get_line(client, buf, sizeof(buf));
+   //printf(buf);
   }
   if (content_length == -1) {
    bad_request(client);
@@ -443,6 +427,7 @@ void not_found(int client)
  send(client, buf, strlen(buf), 0);
  sprintf(buf, "</BODY></HTML>\r\n");
  send(client, buf, strlen(buf), 0);
+ 
 }
 
 /**********************************************************************/
@@ -509,6 +494,8 @@ int startup(unsigned short int port,char* addr)
   error_die("listen");
  return(httpd);
 }
+
+
 
 /**********************************************************************/
 /* Inform the client that the requested web method has not been
